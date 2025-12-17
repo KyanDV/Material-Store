@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "12621387638",
+    "project_id": "material-store-7d076",
+    "storage_bucket": "material-store-7d076.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:12621387638:android:106753e5dce7583944cc57",
+        "android_client_info": {
+          "package_name": "com.example.material_store"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRfX9ONx5XJwUBnOiVoU6SVdAEghydS7c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:12621387638:android:309d0c6fa3cce42d44cc57",
+        "android_client_info": {
+          "package_name": "com.materialstore.finder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRfX9ONx5XJwUBnOiVoU6SVdAEghydS7c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
