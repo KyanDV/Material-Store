@@ -1,0 +1,6 @@
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Aplikasi ini memerlukan akses ke galeri untuk memilih gambar produk.</string>
+<key>NSCameraUsageDescription</key>
+<string>Aplikasi ini memerlukan akses ke kamera untuk mengambil foto produk.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Aplikasi ini memerlukan akses ke mikrofon untuk merekam video (opsional).</string>
