@@ -44,7 +44,7 @@ class RoleSelectionScreen extends StatelessWidget {
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 icon: const Icon(Icons.person),
-                label: const Text('Mencari Toko'),
+                label: const Text('Mencari Toko', style: TextStyle(color: Colors.black87)),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 16),
@@ -62,8 +62,8 @@ class RoleSelectionScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 16),
-                  backgroundColor: Colors.deepOrange,
-                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFFFBF3D5),
+                  foregroundColor: Colors.black87,
                 ),
                 onPressed: () {
                   Navigator.of(context).push(

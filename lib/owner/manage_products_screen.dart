@@ -299,7 +299,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                 )
                     : const SizedBox(width: 50, height: 50, child: Icon(Icons.image_not_supported, color: Colors.grey)),
                 title: Text(data['name'] ?? 'Tanpa Nama'),
-                subtitle: Text(displayPrice),
+                subtitle: Text(displayPrice, style: const TextStyle(color: Colors.black87)),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

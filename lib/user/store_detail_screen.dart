@@ -32,9 +32,6 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Toko'),
-      ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: Supabase.instance.client.from('stores').select().eq('id', widget.storeId).single(),
         builder: (context, snapshot) {
@@ -51,14 +48,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             (data['longitude'] as num?)?.toDouble() ?? 0.0,
           );
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ... (Bagian Peta dan Info Toko tidak berubah)
-                SizedBox(
-                  height: 250,
-                  child: GoogleMap(
+          return CustomScrollView(
+            slivers: [
+              // 1. Collapsing Map Header
+              SliverAppBar(
+                expandedHeight: 250.0,
+                floating: false,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(data['storeName'] ?? 'Detail Toko', 
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
+                  background: GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: storePosition,
                       zoom: 16,
@@ -75,9 +75,14 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         infoWindow: InfoWindow(title: data['storeName'] ?? 'Lokasi Toko'),
                       ),
                     },
+                    liteModeEnabled: false, // Better interaction
+                    zoomControlsEnabled: false,
                   ),
                 ),
-                Padding(
+              ),
+              // 2. Store Info
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,34 +93,39 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildInfoTile(
-                        icon: Icons.location_on,
-                        title: 'Alamat',
-                        subtitle: data['address'] ?? 'Alamat tidak tersedia',
-                      ),
-                      const Divider(),
-                      _buildInfoTile(
-                        icon: Icons.phone,
-                        title: 'Kontak',
-                        subtitle: data['contactInfo'] ?? 'Kontak tidak tersedia',
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
+                         icon: Icons.location_on,
+                         title: 'Alamat',
+                         subtitle: data['address'] ?? 'Alamat tidak tersedia',
+                       ),
+                       const Divider(),
+                       _buildInfoTile(
+                         icon: Icons.phone,
+                         title: 'Kontak',
+                         subtitle: data['contactInfo'] ?? 'Kontak tidak tersedia',
+                       ),
+                       const SizedBox(height: 24),
+                       // Buttons (Direction etc)
+                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              icon: const Icon(Icons.directions),
-                              label: const Text('Arahkan'),
+                              icon: const Icon(Icons.directions, color: Colors.white),
+                              label: const Text('Arahkan', style: TextStyle(color: Colors.black87)),
                               onPressed: () {
                                 _launchURL('https://www.google.com/maps/search/?api=1&query=${storePosition.latitude},${storePosition.longitude}');
                               },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton.icon(
-                              icon: const Icon(Icons.chat),
-                              label: const Text('Hubungi'),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                              icon: const Icon(Icons.chat, color: Colors.white),
+                              label: const Text('Hubungi', style: TextStyle(color: Colors.black87)),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                               onPressed: () {
                                 final contact = data['contactInfo'] as String?;
                                 if (contact != null) {
@@ -127,83 +137,116 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                       SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                             final String query = Uri.encodeComponent('${data['storeName']} ${data['address']}');
+                             _launchURL('https://www.google.com/maps/search/?api=1&query=$query');
+                          },
+                          icon: const Icon(Icons.star_rate_rounded, color: Colors.amber),
+                          label: const Text('Lihat Rating & Review di Google Maps', style: TextStyle(color: Colors.black87)),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Katalog Produk',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
-                const Divider(thickness: 8),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Katalog Produk',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: Supabase.instance.client
-                      .from('products')
-                      .stream(primaryKey: ['id'])
-                      .eq('store_id', widget.storeId)
-                      .order('name', ascending: true),
-                  builder: (context, productSnapshot) {
-                    if (productSnapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!productSnapshot.hasData || productSnapshot.data!.isEmpty) {
-                      return const Padding(
+              ),
+
+              // 3. Product Grid
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: Supabase.instance.client
+                    .from('products')
+                    .stream(primaryKey: ['id'])
+                    .eq('store_id', widget.storeId)
+                    .order('name', ascending: true),
+                builder: (context, productSnapshot) {
+                  if (productSnapshot.connectionState == ConnectionState.waiting) {
+                    return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+                  }
+                  if (!productSnapshot.hasData || productSnapshot.data!.isEmpty) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
                         child: Center(child: Text('Toko ini belum memiliki produk di katalog.')),
-                      );
-                    }
-
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: productSnapshot.data!.length,
-                      separatorBuilder: (context, index) => const Divider(indent: 16, endIndent: 16),
-                      itemBuilder: (context, index) {
-                        var productData = productSnapshot.data![index];
-                        String? imageUrl = productData['imageUrl'];
-                        String price = 'Rp ${(productData['price'] as num?)?.toStringAsFixed(0) ?? '0'}';
-                        String unit = productData['unit'] ?? '';
-                        String displayPrice = unit.isNotEmpty ? '$price / $unit' : price;
-
-                        return ListTile(
-                          leading: imageUrl != null
-                              ? SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              // --- 2. GANTI WIDGET DI SINI ---
-                              child: CachedNetworkImage(
-                                imageUrl: imageUrl,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2.0),
-                                ),
-                                errorWidget: (context, url, error) => const Icon(
-                                  Icons.broken_image,
-                                  size: 40,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-                          )
-                              : const SizedBox(width: 60, height: 60, child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey)),
-                          title: Text(productData['name'] ?? 'Tanpa Nama'),
-                          trailing: Text(
-                            displayPrice,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.deepOrange),
-                            textAlign: TextAlign.right,
-                          ),
-                        );
-                      },
+                      ),
                     );
-                  },
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+                  }
+                  
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.75, // Taller for image + text
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          var productData = productSnapshot.data![index];
+                          String? imageUrl = productData['imageUrl'];
+                          String price = 'Rp ${(productData['price'] as num?)?.toStringAsFixed(0) ?? '0'}';
+                          String unit = productData['unit'] ?? '';
+                          String displayPrice = unit.isNotEmpty ? '$price / $unit' : price;
+
+                          return Card(
+                            elevation: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      image: imageUrl != null
+                                          ? DecorationImage(image: CachedNetworkImageProvider(imageUrl), fit: BoxFit.cover)
+                                          : null,
+                                    ),
+                                    child: imageUrl == null
+                                        ? Center(child: Icon(Icons.image_not_supported, color: Colors.grey[400], size: 40))
+                                        : null,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        productData['name'] ?? 'Tanpa Nama',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        displayPrice,
+                                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        childCount: productSnapshot.data!.length,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
           );
         },
       ),
@@ -224,7 +267,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               children: [
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 16)),
+                Text(subtitle, style: const TextStyle(fontSize: 16, color: Colors.black87)),
               ],
             ),
           ),

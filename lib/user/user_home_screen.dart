@@ -3,7 +3,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:material_store/user/store_detail_screen.dart';
 
@@ -37,6 +39,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+
 
   Future<void> _determinePosition() async {
     setState(() => _isLoadingLocation = true);
@@ -77,6 +81,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+      
       if (mounted) {
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
@@ -121,19 +126,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         children: [
           // Search Bar
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Cari nama toko...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Card(
+              elevation: 4,
+              shadowColor: Colors.black26,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Cari toko material...',
+                  prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
             ),
           ),
@@ -183,17 +192,19 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                    return const Center(child: Text('Tidak ada toko yang cocok dengan pencarian.'));
                 }
 
-                if (_currentLocation != null) {
+                final myLoc = _currentLocation;
+                if (myLoc != null) {
                   docs.sort((a, b) {
                      var latA = (a['latitude'] as num?)?.toDouble();
                      var lngA = (a['longitude'] as num?)?.toDouble();
                      var latB = (b['latitude'] as num?)?.toDouble();
                      var lngB = (b['longitude'] as num?)?.toDouble();
                      
-                     if (latA == null || lngA == null || latB == null || lngB == null) return 0;
+                     if (latA == null || lngA == null) return 1; // A to bottom
+                     if (latB == null || lngB == null) return -1; // B to bottom
                      
-                     double distA = _calculateDistance(_currentLocation!.latitude, _currentLocation!.longitude, latA, lngA);
-                     double distB = _calculateDistance(_currentLocation!.latitude, _currentLocation!.longitude, latB, lngB);
+                     double distA = _calculateDistance(myLoc.latitude, myLoc.longitude, latA, lngA);
+                     double distB = _calculateDistance(myLoc.latitude, myLoc.longitude, latB, lngB);
                      
                      return distA.compareTo(distB);
                   });
@@ -209,6 +220,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     String? imageUrl = data['imageUrl'];
                     double? lat = (data['latitude'] as num?)?.toDouble();
                     double? lng = (data['longitude'] as num?)?.toDouble();
+                    String? openingHours = data['opening_hours'];
+                    bool isDelivery = data['is_delivery'] ?? false;
 
                     String distanceText = '';
                     if (_currentLocation != null && lat != null && lng != null) {
@@ -225,113 +238,21 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       }
                     }
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => StoreDetailScreen(storeId: data['id']),
-                            ),
-                          );
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Store Image
-                            Container(
-                              width: 100,
-                              height: 100,
-                              color: Colors.grey[200],
-                              child: imageUrl != null && imageUrl.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: imageUrl,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (context, url, _) => const Icon(Icons.store, size: 40, color: Colors.grey),
-                                    )
-                                  : Icon(Icons.store, size: 40, color: Theme.of(context).primaryColor),
-                            ),
-                            
-                            // Store Details
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            storeName,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (distanceText.isNotEmpty)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.green[50],
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
-                                            ),
-                                            child: Text(
-                                              distanceText,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.green[800],
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      address,
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    // Optional: Rating or Open/Close status could be added here
-                                    Row(
-                                      children: [
-                                        Icon(Icons.star, size: 14, color: Colors.amber[700]),
-                                        const SizedBox(width: 4),
-                                        Text('4.8', style: TextStyle(fontSize: 12, color: Colors.grey[800])),
-                                        const SizedBox(width: 12),
-                                        // Just a placeholder for style
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue[50], 
-                                            borderRadius: BorderRadius.circular(4)
-                                          ),
-                                          child: Text(
-                                            'Material',
-                                            style: TextStyle(fontSize: 10, color: Colors.blue[700]),
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    return StoreCard(
+                      storeName: storeName,
+                      address: address,
+                      imageUrl: imageUrl,
+                      openingHours: openingHours,
+                      isDelivery: isDelivery,
+                      distanceText: distanceText,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StoreDetailScreen(storeId: data['id']),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -340,6 +261,169 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           ),
 
         ],
+      ),
+    );
+  }
+}
+
+class StoreCard extends StatefulWidget {
+  final String storeName;
+  final String address;
+  final String? imageUrl;
+  final String? openingHours;
+  final bool isDelivery;
+  final String distanceText;
+  final VoidCallback onTap;
+
+  const StoreCard({
+    super.key,
+    required this.storeName,
+    required this.address,
+    this.imageUrl,
+    this.openingHours,
+    required this.isDelivery,
+    required this.distanceText,
+    required this.onTap,
+  });
+
+  @override
+  State<StoreCard> createState() => _StoreCardState();
+}
+
+class _StoreCardState extends State<StoreCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Colors from User Requirement
+    final Color hoverColor = const Color(0xFFCFAB8D);
+    final Color defaultColor = const Color(0xFFF0E4D3);
+    final Color primaryColor = Theme.of(context).primaryColor;
+
+    return Card(
+      color: _isHovered ? hoverColor : defaultColor,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      elevation: _isHovered ? 6 : 3,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: widget.onTap,
+        onHover: (value) {
+          setState(() {
+            _isHovered = value;
+          });
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Store Image (Full Width)
+            SizedBox(
+              height: 150,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: widget.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(color: Colors.grey[200]),
+                          errorWidget: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.store, color: Colors.grey)),
+                        )
+                      : Container(color: primaryColor.withOpacity(0.1), child: Icon(Icons.store, size: 50, color: primaryColor.withOpacity(0.5))),
+                  
+                  // Distance Badge
+                  if (widget.distanceText.isNotEmpty)
+                    Positioned(
+                      bottom: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.near_me, size: 14, color: primaryColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.distanceText,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            
+            // Store Details
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.storeName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          widget.address,
+                          style: TextStyle(color: Colors.black87, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (widget.openingHours != null && widget.openingHours!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.access_time, size: 12, color: Colors.grey[700]),
+                              const SizedBox(width: 4),
+                              Text(widget.openingHours!, style: const TextStyle(fontSize: 11, color: Colors.black)),
+                            ],
+                          ),
+                        ),
+                      const Spacer(),
+                      if (widget.isDelivery)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFA8112), 
+                            borderRadius: BorderRadius.circular(12),
+                            // border: Border.all(color: primaryColor.withOpacity(0.2)), // Removing border for clean look
+                          ),
+                          child: const Text('Siap Antar', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                        )
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -103,39 +103,38 @@ class _RegisterStoreScreenState extends State<RegisterStoreScreen> {
           setState(() {
             _addressController.text = address;
             _mapAddressLoadingText = 'Alamat ditemukan.';
+            
+            // Auto-fill Store Name - relaxed logic
+            // Use 'name' from placemark if it exists. 
+            // Often 'name' is the building name or business name.
+            if (p.name != null && p.name!.isNotEmpty) {
+               // Only overwrite if currently empty or auto-filled
+               if (_nameController.text.isEmpty || _nameController.text == p.street) {
+                 _nameController.text = p.name!;
+               }
+            }
           });
         } else if (mounted) {
           setState(() {
             _addressController.text = '';
-            _mapAddressLoadingText = 'Tidak ada alamat yang ditemukan untuk lokasi ini.';
+            _mapAddressLoadingText = 'Tidak ada alamat yang ditemukan (Coba geser sedikit).';
           });
         }
       } catch (e) {
         if (mounted) {
-          setState(() => _mapAddressLoadingText = 'Gagal mendapatkan alamat otomatis.');
+          // Fallback if geocoding fails (e.g. quota exceeded or network error)
+          setState(() => _mapAddressLoadingText = 'Gagal memuat alamat: ${e.toString()}');
         }
       }
     }
   }
 
 
-  Future<void> _getLatLngFromAddress() async {
-    if (_addressController.text.trim().isEmpty) return;
-    if (!mounted) return;
-    setState(() => _mapAddressLoadingText = 'Mencari lokasi dari alamat...');
-    try {
-      List<Location> locations = await locationFromAddress(_addressController.text);
-      if (locations.isNotEmpty) {
-        final loc = locations.first;
-        _updateLocation(LatLng(loc.latitude, loc.longitude), moveMap: true, getAddress: false);
-        setState(() => _mapAddressLoadingText = 'Lokasi ditemukan di peta.');
-      } else {
-        setState(() => _mapAddressLoadingText = 'Alamat tidak ditemukan.');
-      }
-    } catch (e) {
-      setState(() => _mapAddressLoadingText = 'Gagal mencari lokasi. Periksa koneksi internet.');
-    }
-  }
+
+
+
+
+
 
   Future<void> _registerStore() async {
     if (!_formKey.currentState!.validate() || _selectedLocation == null) {
@@ -205,6 +204,7 @@ class _RegisterStoreScreenState extends State<RegisterStoreScreen> {
                 const SizedBox(height: 24),
                 const Text('Pilih Lokasi & Alamat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
+                
                 Container(
                   height: 300,
                   decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
@@ -215,13 +215,9 @@ class _RegisterStoreScreenState extends State<RegisterStoreScreen> {
                         _mapController.complete(controller);
                       }
                     },
-                    // --- PERUBAHAN DI SINI ---
-                    // Menggunakan onTap yang hanya memberikan posisi LatLng
                     onTap: (LatLng position) {
-                      // Memanggil _updateLocation dengan posisi yang diklik
                       _updateLocation(position);
                     },
-                    // onPoiTap dinonaktifkan untuk sementara
                     markers: _markers,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: true,
@@ -234,15 +230,9 @@ class _RegisterStoreScreenState extends State<RegisterStoreScreen> {
                   decoration: InputDecoration(
                     labelText: 'Alamat Lengkap Toko',
                     helperText: _mapAddressLoadingText,
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: _getLatLngFromAddress,
-                      tooltip: 'Cari Lokasi dari Alamat Ini',
-                    ),
                   ),
                   validator: (v) => v!.isEmpty ? 'Alamat tidak boleh kosong' : null,
                   maxLines: 3,
-                  onFieldSubmitted: (_) => _getLatLngFromAddress(),
                 ),
                 const SizedBox(height: 24),
                 _isLoading

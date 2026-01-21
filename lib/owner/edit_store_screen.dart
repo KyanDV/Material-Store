@@ -22,6 +22,10 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
   final _contactController = TextEditingController();
   final _addressController = TextEditingController();
 
+  final _openingHoursController = TextEditingController();
+  
+  bool _isDelivery = false;
+
   final Completer<GoogleMapController> _mapController = Completer();
 
   LatLng? _selectedLocation;
@@ -43,6 +47,7 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
     _nameController.dispose();
     _contactController.dispose();
     _addressController.dispose();
+    _openingHoursController.dispose();
     super.dispose();
   }
 
@@ -57,6 +62,8 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
       _nameController.text = data['storeName'] ?? '';
       _contactController.text = data['contactInfo'] ?? '';
       _addressController.text = data['address'] ?? '';
+      _openingHoursController.text = data['opening_hours'] ?? '';
+      _isDelivery = data['is_delivery'] ?? false;
       _currentImageUrl = data['imageUrl'];
 
       if (data['latitude'] != null && data['longitude'] != null) {
@@ -121,10 +128,13 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
     });
 
     if (moveMap) {
-      final GoogleMapController controller = await _mapController.future;
-      controller.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: latLng, zoom: 15.0),
-      ));
+       // Ensure controller is ready before moving
+       if (_mapController.isCompleted) {
+          final GoogleMapController controller = await _mapController.future;
+          controller.animateCamera(CameraUpdate.newCameraPosition(
+            CameraPosition(target: latLng, zoom: 17.0),
+          ));
+       }
     }
 
     if (getAddress) {
@@ -145,6 +155,8 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
       }
     }
   }
+
+
 
   Future<void> _updateStore() async {
     if (!_formKey.currentState!.validate() || _selectedLocation == null) {
@@ -171,6 +183,8 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
         'address': _addressController.text,
         'latitude': _selectedLocation!.latitude,
         'longitude': _selectedLocation!.longitude,
+        'opening_hours': _openingHoursController.text,
+        'is_delivery': _isDelivery,
         if (imageUrl != null) 'imageUrl': imageUrl,
       }).eq('id', widget.storeId);
 
@@ -242,6 +256,21 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
                   keyboardType: TextInputType.phone,
                   validator: (v) => v!.isEmpty ? 'Kontak tidak boleh kosong' : null,
                 ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _openingHoursController,
+                  decoration: const InputDecoration(
+                    labelText: 'Jam Operasional',
+                    hintText: 'Contoh: 08:00 - 17:00'
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: const Text('Siap Antar Barang?', style: TextStyle(color: Colors.black87)),
+                  subtitle: const Text('Aktifkan jika toko Anda menyediakan layanan pengiriman.', style: TextStyle(color: Colors.black87)),
+                  value: _isDelivery,
+                  onChanged: (val) => setState(() => _isDelivery = val),
+                ),
                 const SizedBox(height: 24),
                 const Text('Pilih Lokasi & Alamat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
@@ -273,7 +302,7 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(onPressed: _updateStore, child: const Text('Simpan Perubahan')),
+                ElevatedButton(onPressed: _updateStore, child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.black87))),
               ],
             ),
           ),
