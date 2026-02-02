@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:material_store/owner/owner_home_screen.dart';
 import 'package:material_store/user/user_home_screen.dart';
 
+
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
@@ -70,7 +71,10 @@ class RoleSelectionScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => const OwnerHomeScreen()),
                   );
                 },
+
               ),
+              const SizedBox(height: 16),
+
             ],
           ),
         ),

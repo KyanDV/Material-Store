@@ -4,9 +4,9 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geocoding/geocoding.dart';
+
 
 class EditStoreScreen extends StatefulWidget {
   final String storeId;
@@ -22,16 +22,18 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
   final _contactController = TextEditingController();
   final _addressController = TextEditingController();
 
-  final _openingHoursController = TextEditingController();
+  // Operational Data
+  TimeOfDay _openTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay _closeTime = const TimeOfDay(hour: 17, minute: 0);
+  String _startDay = 'Senin';
+  String _endDay = 'Jumat';
+  final List<String> _days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
   
   bool _isDelivery = false;
 
-  final Completer<GoogleMapController> _mapController = Completer();
 
-  LatLng? _selectedLocation;
-  Set<Marker> _markers = {};
+  
   bool _isLoading = true;
-  String _mapAddressLoadingText = '';
   
   Uint8List? _newImageBytes;
   String? _currentImageUrl;
@@ -47,8 +49,29 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
     _nameController.dispose();
     _contactController.dispose();
     _addressController.dispose();
-    _openingHoursController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectTime(bool isOpenTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: isOpenTime ? _openTime : _closeTime,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isOpenTime) {
+          _openTime = picked;
+        } else {
+          _closeTime = picked;
+        }
+      });
+    }
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   Future<void> _fetchStoreData() async {
@@ -62,14 +85,38 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
       _nameController.text = data['storeName'] ?? '';
       _contactController.text = data['contactInfo'] ?? '';
       _addressController.text = data['address'] ?? '';
-      _openingHoursController.text = data['opening_hours'] ?? '';
+      
+      // Parse Opening Hours: "Senin - Jumat, 08:00 - 17:00"
+      String opHours = data['opening_hours'] ?? '';
+      if (opHours.isNotEmpty && opHours.contains(',') && opHours.contains('-')) {
+        try {
+          final parts = opHours.split(','); // ["Senin - Jumat", " 08:00 - 17:00"]
+          if (parts.length == 2) {
+             final dayPart = parts[0].trim();
+             final timePart = parts[1].trim();
+             
+             final daySplit = dayPart.split('-');
+             if (daySplit.length == 2) {
+                String sDay = daySplit[0].trim();
+                String eDay = daySplit[1].trim();
+                if (_days.contains(sDay)) _startDay = sDay;
+                if (_days.contains(eDay)) _endDay = eDay;
+             }
+
+             final timeSplit = timePart.split('-');
+             if (timeSplit.length == 2) {
+                final startT = timeSplit[0].trim().split(':');
+                final endT = timeSplit[1].trim().split(':');
+                if (startT.length == 2) _openTime = TimeOfDay(hour: int.parse(startT[0]), minute: int.parse(startT[1]));
+                if (endT.length == 2) _closeTime = TimeOfDay(hour: int.parse(endT[0]), minute: int.parse(endT[1]));
+             }
+          }
+        } catch (_) {
+          debugPrint('Error parsing opening hours, using defaults');
+        }
+      }
       _isDelivery = data['is_delivery'] ?? false;
       _currentImageUrl = data['imageUrl'];
-
-      if (data['latitude'] != null && data['longitude'] != null) {
-        _selectedLocation = LatLng(data['latitude'], data['longitude']);
-        _updateLocation(_selectedLocation!, moveMap: true, getAddress: false);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat data toko: $e')));
@@ -79,10 +126,12 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
     }
   }
 
+
   Future<void> _pickImage() async {
      try {
        final picker = ImagePicker();
-       final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40, maxWidth: 600);
+       final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50, maxWidth: 800);
+       
        if (pickedFile != null) {
          final bytes = await pickedFile.readAsBytes();
          setState(() {
@@ -110,58 +159,14 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
     }
   }
 
-  void _updateLocation(LatLng latLng, {bool moveMap = true, bool getAddress = true}) async {
-    if (!mounted) return;
 
-    setState(() {
-      _selectedLocation = latLng;
-      _mapAddressLoadingText = getAddress ? 'Mencari alamat...' : _mapAddressLoadingText;
-      _markers = {
-        Marker(
-          markerId: const MarkerId('selected_location'),
-          position: latLng,
-          infoWindow: const InfoWindow(title: 'Lokasi Toko'),
-          draggable: true,
-          onDragEnd: (newPosition) => _updateLocation(newPosition),
-        )
-      };
-    });
-
-    if (moveMap) {
-       // Ensure controller is ready before moving
-       if (_mapController.isCompleted) {
-          final GoogleMapController controller = await _mapController.future;
-          controller.animateCamera(CameraUpdate.newCameraPosition(
-            CameraPosition(target: latLng, zoom: 17.0),
-          ));
-       }
-    }
-
-    if (getAddress) {
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
-        if (mounted && placemarks.isNotEmpty) {
-          Placemark p = placemarks[0];
-          String address = [p.street, p.subLocality, p.locality, p.subAdministrativeArea, p.postalCode]
-              .where((s) => s != null && s.isNotEmpty)
-              .join(', ');
-          setState(() {
-            _addressController.text = address;
-            _mapAddressLoadingText = 'Alamat ditemukan.';
-          });
-        }
-      } catch (e) {
-        if (mounted) setState(() => _mapAddressLoadingText = 'Gagal mendapatkan alamat otomatis.');
-      }
-    }
-  }
 
 
 
   Future<void> _updateStore() async {
-    if (!_formKey.currentState!.validate() || _selectedLocation == null) {
+    if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap lengkapi semua data dan pilih lokasi di peta.')),
+        const SnackBar(content: Text('Harap lengkapi semua data.')),
       );
       return;
     }
@@ -177,13 +182,25 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
         }
       }
 
+      double? lat;
+      double? lng;
+      try {
+        List<Location> locations = await locationFromAddress(_addressController.text);
+        if (locations.isNotEmpty) {
+          lat = locations.first.latitude;
+          lng = locations.first.longitude;
+        }
+      } catch (e) {
+        debugPrint('Geocoding failed: $e');
+      }
+
       await Supabase.instance.client.from('stores').update({
         'storeName': _nameController.text,
         'contactInfo': _contactController.text,
         'address': _addressController.text,
-        'latitude': _selectedLocation!.latitude,
-        'longitude': _selectedLocation!.longitude,
-        'opening_hours': _openingHoursController.text,
+        if (lat != null) 'latitude': lat,
+        if (lng != null) 'longitude': lng,
+        'opening_hours': '$_startDay - $_endDay, ${_formatTime(_openTime)} - ${_formatTime(_closeTime)}',
         'is_delivery': _isDelivery,
         if (imageUrl != null) 'imageUrl': imageUrl,
       }).eq('id', widget.storeId);
@@ -257,12 +274,55 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
                   validator: (v) => v!.isEmpty ? 'Kontak tidak boleh kosong' : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _openingHoursController,
-                  decoration: const InputDecoration(
-                    labelText: 'Jam Operasional',
-                    hintText: 'Contoh: 08:00 - 17:00'
-                  ),
+                const SizedBox(height: 16),
+                
+                 // Hari Operasional
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _startDay,
+                        decoration: const InputDecoration(labelText: 'Dari Hari'),
+                        items: _days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                        onChanged: (val) => setState(() => _startDay = val!),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _endDay,
+                        decoration: const InputDecoration(labelText: 'Sampai Hari'),
+                        items: _days.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                        onChanged: (val) => setState(() => _endDay = val!),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Jam Operasional
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectTime(true),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(labelText: 'Jam Buka', suffixIcon: Icon(Icons.access_time)),
+                          child: Text(_formatTime(_openTime)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectTime(false),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(labelText: 'Jam Tutup', suffixIcon: Icon(Icons.access_time)),
+                          child: Text(_formatTime(_closeTime)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(
@@ -272,31 +332,10 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
                   onChanged: (val) => setState(() => _isDelivery = val),
                 ),
                 const SizedBox(height: 24),
-                const Text('Pilih Lokasi & Alamat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Container(
-                  height: 300,
-                  decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: _selectedLocation ?? const LatLng(-6.2, 106.8),
-                      zoom: 14,
-                    ),
-                    onMapCreated: (GoogleMapController controller) {
-                      if (!_mapController.isCompleted) _mapController.complete(controller);
-                    },
-                    onTap: (LatLng latLng) => _updateLocation(latLng),
-                    markers: _markers,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _addressController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Alamat Lengkap Toko',
-                    helperText: _mapAddressLoadingText,
                   ),
                   validator: (v) => v!.isEmpty ? 'Alamat tidak boleh kosong' : null,
                   maxLines: 3,

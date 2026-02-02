@@ -181,6 +181,74 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
     final storeId = _storeData!['id'];
     final storeName = _storeData!['storeName'] ?? 'Nama Toko';
     final storeAddress = _storeData!['address'] ?? '-';
+    final status = _storeData!['status'];
+
+    if (status == 'Pending') {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.hourglass_top, size: 80, color: Colors.orange),
+              const SizedBox(height: 24),
+              const Text(
+                'Menunggu Verifikasi',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Data toko dan dokumen Anda sedang ditinjau oleh Admin. Harap tunggu persetujuan sebelum dapat mengelola toko.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: _fetchStoreData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Cek Status'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (status == 'Rejected') {
+       return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cancel_outlined, size: 80, color: Colors.red),
+              const SizedBox(height: 24),
+              const Text(
+                'Verifikasi Ditolak',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Mohon maaf, pengajuan toko Anda ditolak. Silakan hubungi admin untuk info lebih lanjut.',
+                 textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+               const SizedBox(height: 32),
+               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(120, 45),
+                ),
+                onPressed: () {
+                   // Hapus data toko yang ditolak agar user bisa daftar ulang
+                   _deleteStore(_storeData!['id']); 
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),

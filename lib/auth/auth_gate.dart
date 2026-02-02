@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:material_store/auth/login_screen.dart';
 import 'package:material_store/auth/role_selection_screen.dart';
+import 'package:material_store/admin/admin_dashboard_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -18,6 +19,10 @@ class AuthGate extends StatelessWidget {
         
         // Menggunakan session sebagai kebenaran
         if (session != null) {
+          final user = Supabase.instance.client.auth.currentUser;
+          if (user?.email == 'admin1@gmail.com') {
+            return const AdminDashboardScreen();
+          }
           return const RoleSelectionScreen();
         }
 

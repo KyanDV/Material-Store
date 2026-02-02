@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -16,7 +15,6 @@ class StoreDetailScreen extends StatefulWidget {
 }
 
 class _StoreDetailScreenState extends State<StoreDetailScreen> {
-  final Completer<GoogleMapController> _mapController = Completer();
 
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -43,10 +41,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
           }
 
           var data = snapshot.data!;
-          final LatLng storePosition = LatLng(
-            (data['latitude'] as num?)?.toDouble() ?? 0.0,
-            (data['longitude'] as num?)?.toDouble() ?? 0.0,
-          );
+
 
           return CustomScrollView(
             slivers: [
@@ -58,25 +53,34 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(data['storeName'] ?? 'Detail Toko', 
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
-                  background: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: storePosition,
-                      zoom: 16,
-                    ),
-                    onMapCreated: (controller) {
-                      if (!_mapController.isCompleted) {
-                        _mapController.complete(controller);
-                      }
-                    },
-                    markers: {
-                      Marker(
-                        markerId: MarkerId(widget.storeId),
-                        position: storePosition,
-                        infoWindow: InfoWindow(title: data['storeName'] ?? 'Lokasi Toko'),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                       data['imageUrl'] != null
+                          ? CachedNetworkImage(
+                              imageUrl: data['imageUrl']!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(color: Colors.grey[300]),
+                              errorWidget: (context, url, error) => Container(color: Colors.grey[300], child: const Icon(Icons.broken_image)),
+                            )
+                          : Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.store, size: 80, color: Colors.grey),
+                            ),
+                      // Gradient overlay for better text visibility
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.7),
+                            ],
+                          ),
+                        ),
                       ),
-                    },
-                    liteModeEnabled: false, // Better interaction
-                    zoomControlsEnabled: false,
+                    ],
                   ),
                 ),
               ),
@@ -103,19 +107,32 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                          title: 'Kontak',
                          subtitle: data['contactInfo'] ?? 'Kontak tidak tersedia',
                        ),
+                       const Divider(),
+                       _buildInfoTile(
+                         icon: Icons.access_time,
+                         title: 'Jam Operasional',
+                         subtitle: data['opening_hours'] ?? 'Jam operasional tidak tersedia',
+                       ),
+                       const Divider(),
+                       _buildInfoTile(
+                         icon: Icons.local_shipping,
+                         title: 'Layanan Antar',
+                         subtitle: (data['is_delivery'] == true) ? 'Tersedia' : 'Tidak Tersedia',
+                       ),
                        const SizedBox(height: 24),
                        // Buttons (Direction etc)
                        Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              icon: const Icon(Icons.directions, color: Colors.white),
-                              label: const Text('Arahkan', style: TextStyle(color: Colors.black87)),
+                              icon: const Icon(Icons.star_rate_rounded, color: Colors.white),
+                              label: const Text('Rating & Review', style: TextStyle(color: Colors.white)),
                               onPressed: () {
-                                _launchURL('https://www.google.com/maps/search/?api=1&query=${storePosition.latitude},${storePosition.longitude}');
+                                 final String query = Uri.encodeComponent('${data['storeName']} ${data['address']}');
+                                 _launchURL('https://www.google.com/maps/search/?api=1&query=$query');
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
+                                backgroundColor: Colors.amber[700],
                                 foregroundColor: Colors.white,
                               ),
                             ),
@@ -124,7 +141,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.chat, color: Colors.white),
-                              label: const Text('Hubungi', style: TextStyle(color: Colors.black87)),
+                              label: const Text('Hubungi', style: TextStyle(color: Colors.white)),
                               style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                               onPressed: () {
                                 final contact = data['contactInfo'] as String?;
@@ -136,18 +153,6 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                       SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                             final String query = Uri.encodeComponent('${data['storeName']} ${data['address']}');
-                             _launchURL('https://www.google.com/maps/search/?api=1&query=$query');
-                          },
-                          icon: const Icon(Icons.star_rate_rounded, color: Colors.amber),
-                          label: const Text('Lihat Rating & Review di Google Maps', style: TextStyle(color: Colors.black87)),
-                        ),
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -182,13 +187,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.75, // Taller for image + text
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
+                    sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           var productData = productSnapshot.data![index];
@@ -198,44 +197,114 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           String displayPrice = unit.isNotEmpty ? '$price / $unit' : price;
 
                           return Card(
-                            elevation: 2,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      image: imageUrl != null
-                                          ? DecorationImage(image: CachedNetworkImageProvider(imageUrl), fit: BoxFit.cover)
+                            elevation: 1,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: InkWell(
+                              onTap: () {
+                                if (imageUrl != null && imageUrl.isNotEmpty) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      backgroundColor: Colors.transparent,
+                                      insetPadding: const EdgeInsets.all(16), // Maximize space
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Container(
+                                            width: double.infinity,
+                                            height: 400, // Fixed height or adjust as needed, or remove for auto
+                                            constraints: const BoxConstraints(maxHeight: 600, minHeight: 300),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                              color: Colors.white,
+                                            ),
+                                            padding: const EdgeInsets.all(2),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: InteractiveViewer(
+                                                panEnabled: true,
+                                                minScale: 0.5,
+                                                maxScale: 4.0,
+                                                child: CachedNetworkImage(
+                                                  imageUrl: imageUrl,
+                                                  fit: BoxFit.contain,
+                                                  placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                                                  errorWidget: (context, url, error) => const Icon(Icons.error, size: 50),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: -10,
+                                            right: -10,
+                                            child: Container(
+                                              decoration: const BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.close, color: Colors.black),
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                constraints: const BoxConstraints(),
+                                                padding: const EdgeInsets.all(8),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Gambar tidak tersedia untuk produk ini.')),
+                                  );
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Small Image
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(8),
+                                        image: imageUrl != null
+                                            ? DecorationImage(image: CachedNetworkImageProvider(imageUrl), fit: BoxFit.cover)
+                                            : null,
+                                      ),
+                                      child: imageUrl == null
+                                          ? Center(child: Icon(Icons.image_not_supported, color: Colors.grey[400], size: 24))
                                           : null,
                                     ),
-                                    child: imageUrl == null
-                                        ? Center(child: Icon(Icons.image_not_supported, color: Colors.grey[400], size: 40))
-                                        : null,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        productData['name'] ?? 'Tanpa Nama',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                    const SizedBox(width: 16),
+                                    // Details
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            productData['name'] ?? 'Tanpa Nama',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            displayPrice,
+                                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        displayPrice,
-                                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           );
                         },

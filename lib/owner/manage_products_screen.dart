@@ -19,7 +19,39 @@ class ManageProductsScreen extends StatefulWidget {
 }
 
 class _ManageProductsScreenState extends State<ManageProductsScreen> {
-   Future<String?> _uploadImage(Uint8List imageData, String productId) async {
+  List<Map<String, dynamic>> _products = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await Supabase.instance.client
+          .from('products')
+          .select()
+          .eq('store_id', widget.storeId)
+          .order('name', ascending: true);
+
+      if (mounted) {
+        setState(() {
+          _products = List<Map<String, dynamic>>.from(response);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat produk: $e')));
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<String?> _uploadImage(Uint8List imageData, String productId) async {
     try {
       final path = 'product_images/${widget.storeId}/$productId.jpg';
       await Supabase.instance.client.storage
@@ -234,6 +266,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     if (dialogContext.mounted) {
                       if (success) {
                         Navigator.of(dialogContext).pop();
+                        _fetchProducts(); // Refresh list after save
                       } else {
                         setDialogState(() => isSaving = false);
                       }
@@ -255,69 +288,54 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       appBar: AppBar(
         title: Text('Katalog: ${widget.storeName}'),
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: Supabase.instance.client
-            .from('products')
-            .stream(primaryKey: ['id'])
-            .eq('store_id', widget.storeId)
-            .order('name', ascending: true),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Gagal memuat produk.'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Belum ada produk. Tekan + untuk menambah.'));
-          }
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator()) 
+          : _products.isEmpty
+              ? const Center(child: Text('Belum ada produk. Tekan + untuk menambah.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _products.length,
+                  itemBuilder: (context, index) {
+                    final data = _products[index];
+                    String? imageUrl = data['imageUrl'];
+                    String price = 'Rp ${(data['price'] as num?)?.toStringAsFixed(0) ?? '0'}';
+                    String unit = data['unit'] ?? '';
+                    String displayPrice = unit.isNotEmpty ? '$price / $unit' : price;
 
-          return ListView(
-            children: snapshot.data!.map((data) {
-              String? imageUrl = data['imageUrl'];
-              String price = 'Rp ${(data['price'] as num?)?.toStringAsFixed(0) ?? '0'}';
-              String unit = data['unit'] ?? '';
-
-              String displayPrice = unit.isNotEmpty ? '$price / $unit' : price;
-
-              return ListTile(
-                leading: imageUrl != null
-                    ? SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(imageUrl, fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) {
-                        return progress == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.broken_image, color: Colors.grey);
-                      },
-                    ),
-                  ),
-                )
-                    : const SizedBox(width: 50, height: 50, child: Icon(Icons.image_not_supported, color: Colors.grey)),
-                title: Text(data['name'] ?? 'Tanpa Nama'),
-                subtitle: Text(displayPrice, style: const TextStyle(color: Colors.black87)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _showProductDialog(productDoc: data),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteProduct(data['id']),
-                    ),
-                  ],
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: imageUrl != null && imageUrl.isNotEmpty
+                            ? SizedBox(
+                                width: 50,
+                                height: 50,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(imageUrl, fit: BoxFit.cover,
+                                    errorBuilder: (ctx, err, stack) => const Icon(Icons.broken_image, color: Colors.grey),
+                                  ),
+                                ),
+                              )
+                            : const SizedBox(width: 50, height: 50, child: Icon(Icons.image_not_supported, color: Colors.grey)),
+                        title: Text(data['name'] ?? 'Tanpa Nama', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(displayPrice, style: const TextStyle(color: Colors.green)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showProductDialog(productDoc: data),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteProduct(data['id']),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            }).toList(),
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showProductDialog(),
         tooltip: 'Tambah Produk',
@@ -355,6 +373,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Produk berhasil dihapus.'), backgroundColor: Colors.green),
                   );
+                  _fetchProducts(); // Refresh list after delete
                 }
               } catch (e) {
                  if (mounted) {

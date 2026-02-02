@@ -89,8 +89,9 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         });
       }
     } catch (e) {
+       debugPrint('Location Error: $e');
        if (mounted) setState(() {
-         _loadingMessage = 'Gagal mendapatkan lokasi.';
+         _loadingMessage = 'Gagal mendapatkan lokasi: $e';
          _isLoadingLocation = false;
        });
     }
@@ -147,7 +148,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             ),
           ),
           
-          // Location Status (Optional)
+          // Location Status (With Debug Info)
           if (_isLoadingLocation)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -158,12 +159,30 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   Text(_loadingMessage, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
+            )
+          else if (_currentLocation == null)
+             Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                  children: [
+                     const Icon(Icons.location_off, size: 16, color: Colors.red),
+                     const SizedBox(width: 8),
+                     Expanded(child: Text('Lokasi tidak ditemukan: $_loadingMessage', style: const TextStyle(fontSize: 12, color: Colors.red))),
+                     IconButton(icon: const Icon(Icons.refresh, size: 16), onPressed: _determinePosition)
+                  ],
+                ),
+              ),
             ),
 
           // Store List
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Supabase.instance.client.from('stores').stream(primaryKey: ['id']),
+              stream: Supabase.instance.client.from('stores')
+                  .stream(primaryKey: ['id'])
+                  .eq('status', 'Approved'),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -185,7 +204,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 // Filter and Sort Data
                 var docs = snapshot.data!.where((data) {
                   String name = (data['storeName'] ?? '').toLowerCase();
-                  return name.contains(_searchText);
+                  String address = (data['address'] ?? '').toLowerCase();
+                  return name.contains(_searchText) || address.contains(_searchText);
                 }).toList();
 
                 if (docs.isEmpty) {
@@ -407,6 +427,20 @@ class _StoreCardState extends State<StoreCard> {
                           ),
                         ),
                       const Spacer(),
+                      if (widget.distanceText.isNotEmpty)
+                         Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          child: Row(
+                            children: [
+                              Icon(Icons.near_me, size: 14, color: Theme.of(context).primaryColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.distanceText,
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Theme.of(context).primaryColor),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (widget.isDelivery)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
