@@ -58,6 +58,9 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
 
   Future<void> _logout() async {
     await Supabase.instance.client.auth.signOut();
+    if (mounted) {
+      Navigator.of(context).pop(); // Kembali ke UserHomeScreen setelah logout
+    }
   }
 
   Future<void> _deleteStore(String storeId) async {
@@ -112,11 +115,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
       appBar: AppBar(
         title: const Text('Dashboard Toko'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-            onPressed: _fetchStoreData,
-          ),
+
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
@@ -263,7 +262,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  const Icon(Icons.store_mall_directory, size: 64, color: Colors.blueAccent),
+                  const Icon(Icons.store_mall_directory, size: 64, color: Color(0xFFD3C389)),
                   const SizedBox(height: 12),
                   Text(
                     storeName,
@@ -324,8 +323,8 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
                   icon: Icons.edit_note,
                   title: 'Info Toko',
                   subtitle: 'Ubah nama & alamat',
-                  color: const Color(0xFFFBF3D5),
-                  iconColor: Colors.black87,
+                  color: const Color(0xFFD3C389).withOpacity(0.3),
+                  iconColor: Theme.of(context).colorScheme.onSurface,
                   onTap: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
@@ -343,8 +342,9 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
                   icon: Icons.inventory,
                   title: 'Produk',
                   subtitle: 'Kelola dagangan',
-                  color: Colors.green.shade100,
-                  iconColor: Colors.green,
+                  color: const Color(0xFF0A4A65), // Dark Blue Background
+                  iconColor: const Color(0xFFD3C389), // Gold Icon
+                  textColor: const Color(0xFFD3C389), // Gold Text
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -384,8 +384,11 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
     required String subtitle,
     required Color color,
     required Color iconColor,
+    Color? textColor, // Optional custom text color
     required VoidCallback onTap,
   }) {
+    final effectiveTextColor = textColor ?? Theme.of(context).colorScheme.onSurface;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -393,7 +396,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
         height: 140,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.3),
+          color: color, // Removed .withOpacity(0.3)
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withOpacity(0.5)),
         ),
@@ -404,12 +407,12 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
             const SizedBox(height: 12),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: effectiveTextColor),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.black87),
+              style: TextStyle(fontSize: 12, color: effectiveTextColor),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

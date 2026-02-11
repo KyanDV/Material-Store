@@ -7,7 +7,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:material_store/user/store_detail_screen.dart';
+import 'package:material_store/auth/login_screen.dart';
+import 'package:material_store/auth/register_screen.dart';
+import 'package:material_store/owner/owner_home_screen.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
@@ -42,6 +48,136 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
 
 
+  LatLng? _manualLocation;
+  String _addressName = 'Pilih Alamat Destinasi';
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+
+  // Fungsi Cari Lokasi via OSM
+  Future<void> _searchLocationOSM(String query) async {
+    if (query.isEmpty) return;
+    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1');
+    try {
+      final response = await http.get(url, headers: {'User-Agent': 'MaterialStore/1.0'});
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final lat = double.parse(data[0]['lat']);
+          final lon = double.parse(data[0]['lon']);
+          final newLoc = LatLng(lat, lon);
+          
+          setState(() {
+            _manualLocation = newLoc;
+            _markers = {
+              Marker(
+                markerId: const MarkerId('manual_loc'),
+                position: newLoc,
+                infoWindow: InfoWindow(title: data[0]['display_name']),
+              )
+            };
+          });
+
+          _mapController?.animateCamera(CameraUpdate.newLatLngZoom(newLoc, 15));
+        } else {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lokasi tidak ditemukan')));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error OSM: $e');
+    }
+  }
+
+  void _showManualLocationDialog() {
+    final TextEditingController addressController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Pilih Lokasi Pengiriman'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: addressController,
+                      decoration: InputDecoration(
+                        labelText: 'Cari Alamat (Jalan, Kota)',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: () {
+                             // Panggil fungsi search di parent widget, tapi update state dialog jika perlu
+                             _searchLocationOSM(addressController.text).then((_) {
+                               setStateDialog(() {}); // Refresh map di dialog
+                             });
+                          },
+                        ),
+                      ),
+                      onSubmitted: (val) {
+                         _searchLocationOSM(val).then((_) {
+                           setStateDialog(() {});
+                         });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 300,
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: _manualLocation ?? _currentLocation ?? const LatLng(-6.2088, 106.8456),
+                          zoom: 12,
+                        ),
+                        markers: _markers,
+                        onMapCreated: (controller) => _mapController = controller,
+                        onTap: (latLng) {
+                           // Allow tap to pin
+                           setStateDialog(() {
+                             _manualLocation = latLng;
+                             _markers = {
+                               Marker(markerId: const MarkerId('manual_picked'), position: latLng)
+                             };
+                           });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal', style: TextStyle(color: Color(0xFF0A4A65))),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_manualLocation != null) {
+                      setState(() {
+                         _currentLocation = _manualLocation;
+                         _addressName = addressController.text.isEmpty ? 'Lokasi Terpilih' : addressController.text; 
+                         // Trigger update jarak toko (implementasi nanti di _searchStores / _calculateDistances)
+                         // Asumsi: searchStores menggunakan _currentLocation
+                      });
+                         // _searchStores(); // Tidak perlu, setState sudah memicu rebuild
+
+                      Navigator.pop(context);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD3C389), // Gold background
+                    foregroundColor: const Color(0xFF0A4A65), // Dark Blue text
+                  ),
+                  child: const Text('Gunakan Lokasi Ini'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
   Future<void> _determinePosition() async {
     setState(() => _isLoadingLocation = true);
     
@@ -87,6 +223,25 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           _currentLocation = LatLng(position.latitude, position.longitude);
           _isLoadingLocation = false;
         });
+        
+        // Reverse Geocoding untuk mendapatkan nama jalan/kota dari GPS
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+          if (placemarks.isNotEmpty) {
+            Placemark place = placemarks[0];
+            setState(() {
+              String street = place.street ?? '';
+              String subLoc = place.subLocality ?? '';
+              if (street.isEmpty && subLoc.isEmpty) {
+                 _addressName = place.locality ?? 'Lokasi Anda';
+              } else {
+                 _addressName = '$street, $subLoc'.replaceAll(RegExp(r'^, |,$'), '');
+              }
+            });
+          }
+        } catch (e) {
+          debugPrint('Reverse Geocoding Error: $e');
+        }
       }
     } catch (e) {
        debugPrint('Location Error: $e');
@@ -97,9 +252,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    await Supabase.instance.client.auth.signOut();
-  }
+
 
   double _calculateDistance(double startLat, double startLng, double endLat, double endLng) {
     return Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
@@ -109,17 +262,116 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cari Toko Material'),
+        title: const Text('KANG JATI'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _determinePosition,
-            tooltip: 'Perbarui Lokasi',
+
+          InkWell(
+            onTap: _showManualLocationDialog,
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.red),
+                const SizedBox(width: 4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 200),
+                  child: Text(
+                    _addressName,
+                    style: const TextStyle(color: Colors.black87),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down, color: Colors.black87),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Keluar',
+          const Spacer(), // Spacer agar tombol login/toko ke kanan (atau gunakan MainAxisAlignment di Row parent jika perlu)
+          
+          StreamBuilder<AuthState>(
+            stream: Supabase.instance.client.auth.onAuthStateChange,
+            builder: (context, snapshot) {
+              final session = Supabase.instance.client.auth.currentSession;
+              
+              // Jika sudah login, tampilkan ikon Toko
+              if (session != null) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const OwnerHomeScreen()),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.store, color: Theme.of(context).primaryColor),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Toko', 
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor, 
+                                  fontWeight: FontWeight.bold
+                                )
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () async {
+                          await Supabase.instance.client.auth.signOut();
+                        },
+                        icon: const Icon(Icons.logout, color: Colors.black),
+                        tooltip: 'Keluar',
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Jika belum login, tampilkan tombol Masuk & Daftar
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).primaryColor,
+                        side: BorderSide(color: Theme.of(context).primaryColor),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: const Text('Masuk'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                         Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: const Text('Daftarkan Toko'),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -141,7 +393,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).cardColor,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
               ),
@@ -256,6 +508,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       } else {
                         distanceText = '${distInMeters.toStringAsFixed(0)} m';
                       }
+                    } else if (_currentLocation == null) {
+                       distanceText = 'Lokasi Anda?';
+                    } else {
+                       distanceText = 'Lokasi Toko?';
                     }
 
                     return StoreCard(
@@ -316,9 +572,13 @@ class _StoreCardState extends State<StoreCard> {
   @override
   Widget build(BuildContext context) {
     // Colors from User Requirement
-    final Color hoverColor = const Color(0xFFCFAB8D);
-    final Color defaultColor = const Color(0xFFF0E4D3);
+    final Color hoverColor = const Color(0xFFD3C389); // Gold
+    final Color defaultColor = const Color(0xFF0A4A65); // Dark Blue
     final Color primaryColor = Theme.of(context).primaryColor;
+    
+    // Dynamic Text Color based on Hover State
+    final Color textColor = _isHovered ? const Color(0xFF0A4A65) : Colors.white;
+    final Color iconColor = _isHovered ? const Color(0xFF0A4A65) : Colors.white70;
 
     return Card(
       color: _isHovered ? hoverColor : defaultColor,
@@ -371,7 +631,7 @@ class _StoreCardState extends State<StoreCard> {
                             const SizedBox(width: 4),
                             Text(
                               widget.distanceText,
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
                             ),
                           ],
                         ),
@@ -389,19 +649,22 @@ class _StoreCardState extends State<StoreCard> {
                 children: [
                   Text(
                     widget.storeName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: textColor
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                      Icon(Icons.location_on_outlined, size: 14, color: iconColor),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           widget.address,
-                          style: TextStyle(color: Colors.black87, fontSize: 13),
+                          style: TextStyle(color: textColor, fontSize: 13),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -415,32 +678,19 @@ class _StoreCardState extends State<StoreCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: _isHovered ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.access_time, size: 12, color: Colors.grey[700]),
+                              Icon(Icons.access_time, size: 12, color: iconColor),
                               const SizedBox(width: 4),
-                              Text(widget.openingHours!, style: const TextStyle(fontSize: 11, color: Colors.black)),
+                              Text(widget.openingHours!, style: TextStyle(fontSize: 11, color: textColor)),
                             ],
                           ),
                         ),
                       const Spacer(),
-                      if (widget.distanceText.isNotEmpty)
-                         Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          child: Row(
-                            children: [
-                              Icon(Icons.near_me, size: 14, color: Theme.of(context).primaryColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                widget.distanceText,
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Theme.of(context).primaryColor),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // Distance text removed as per request
                       if (widget.isDelivery)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

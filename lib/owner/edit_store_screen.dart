@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:material_store/services/geocoding_service.dart';
 
 
 class EditStoreScreen extends StatefulWidget {
@@ -185,13 +185,22 @@ class _EditStoreScreenState extends State<EditStoreScreen> {
       double? lat;
       double? lng;
       try {
-        List<Location> locations = await locationFromAddress(_addressController.text);
-        if (locations.isNotEmpty) {
-          lat = locations.first.latitude;
-          lng = locations.first.longitude;
+        final coords = await GeocodingService.getCoordinatesFromAddress(_addressController.text);
+        if (coords != null) {
+          lat = coords['latitude'];
+          lng = coords['longitude'];
+          debugPrint('Geocoding success: lat=$lat, lng=$lng');
         }
       } catch (e) {
         debugPrint('Geocoding failed: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Peringatan: Gagal mendapatkan koordinat lokasi. Jarak tidak akan ditampilkan.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
 
       await Supabase.instance.client.from('stores').update({

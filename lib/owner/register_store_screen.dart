@@ -5,7 +5,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:material_store/services/geocoding_service.dart';
 
 class RegisterStoreScreen extends StatefulWidget {
   const RegisterStoreScreen({super.key});
@@ -144,10 +145,10 @@ class _RegisterStoreScreenState extends State<RegisterStoreScreen> {
       double? lat;
       double? lng;
       try {
-        List<Location> locations = await locationFromAddress(_addressController.text);
-        if (locations.isNotEmpty) {
-          lat = locations.first.latitude;
-          lng = locations.first.longitude;
+        final coords = await GeocodingService.getCoordinatesFromAddress(_addressController.text);
+        if (coords != null) {
+          lat = coords['latitude'];
+          lng = coords['longitude'];
         }
       } catch (e) {
         debugPrint('Geocoding failed: $e');

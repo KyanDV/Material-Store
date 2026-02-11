@@ -302,23 +302,23 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     String unit = data['unit'] ?? '';
                     String displayPrice = unit.isNotEmpty ? '$price / $unit' : price;
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: imageUrl != null && imageUrl.isNotEmpty
-                            ? SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(imageUrl, fit: BoxFit.cover,
-                                    errorBuilder: (ctx, err, stack) => const Icon(Icons.broken_image, color: Colors.grey),
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: imageUrl != null && imageUrl.isNotEmpty
+                              ? SizedBox(
+                                  width: 50,
+                                  height: 50,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(imageUrl, fit: BoxFit.cover,
+                                      errorBuilder: (ctx, err, stack) => const Icon(Icons.broken_image, color: Colors.grey),
+                                    ),
                                   ),
-                                ),
-                              )
-                            : const SizedBox(width: 50, height: 50, child: Icon(Icons.image_not_supported, color: Colors.grey)),
-                        title: Text(data['name'] ?? 'Tanpa Nama', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(displayPrice, style: const TextStyle(color: Colors.green)),
+                                )
+                              : const SizedBox(width: 50, height: 50, child: Icon(Icons.image_not_supported, color: Colors.grey)),
+                          title: Text(data['name'] ?? 'Tanpa Nama', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(displayPrice, style: const TextStyle(color: Colors.green)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -327,7 +327,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                               onPressed: () => _showProductDialog(productDoc: data),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete, color: Colors.redAccent), // Red is fine for delete, or maybe Gold? Let's keep red for danger but maybe brighter?
                               onPressed: () => _deleteProduct(data['id']),
                             ),
                           ],

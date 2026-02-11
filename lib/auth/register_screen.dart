@@ -23,15 +23,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signUp(
-        email: _emailController.text.trim(),
+      final response = await Supabase.instance.client.auth.signUp(
+        email: _emailController.text.trim().replaceAll(RegExp(r'\s+'), '').toLowerCase(),
         password: _passwordController.text.trim(),
       );
       if (mounted) {
-        Navigator.of(context).pop(); // Kembali ke halaman login setelah berhasil
-        ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Pendaftaran berhasil! Silakan login.')),
-        );
+        Navigator.of(context).pop(); // Kembali ke halaman utama
+        
+        if (response.session != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Registrasi Berhasil! Anda telah login.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Registrasi berhasil! Silakan cek email untuk verifikasi (jika belum login otomatis).')),
+          );
+        }
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -56,7 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Akun Baru'),
+        title: const Text('Daftar Toko Baru'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -68,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Buat Akun Anda',
+                'Buat Akun Toko',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),

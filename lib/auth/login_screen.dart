@@ -31,10 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
+        email: _emailController.text.trim().replaceAll(RegExp(r'\s+'), '').toLowerCase(),
         password: _passwordController.text.trim(),
       );
-      // Navigasi ditangani AuthGate
+      
+      if (mounted) {
+        Navigator.pop(context); // Pop LoginScreen agar user melihat RoleSelectionScreen (dari AuthGate)
+      }
     } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,6 +60,15 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Stack(
         children: [
           // Background Gradient
@@ -74,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Card(
                 elevation: 8,
-                color: Colors.white.withOpacity(0.9), // Slightly transparent card
+                color: Colors.white.withOpacity(0.9), // White card on Gold gradient
                 child: Padding(
                   padding: const EdgeInsets.all(32.0),
                   child: Form(
@@ -91,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Selamat Datang',
+                          'KANG JATI',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -100,10 +112,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Aplikasi Material Store',
+                          'Tukang Jawa Tiga',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.black87,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                         ),
                         const SizedBox(height: 48),
@@ -117,8 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value == null || value.isEmpty || !value.contains('@')) {
-                              return 'Masukkan email yang valid';
+                            if (value == null || value.isEmpty) {
+                              return 'Masukkan email';
                             }
                             return null;
                           },

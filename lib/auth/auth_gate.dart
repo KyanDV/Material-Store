@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:material_store/auth/login_screen.dart';
 import 'package:material_store/auth/role_selection_screen.dart';
+import 'package:material_store/user/user_home_screen.dart';
 import 'package:material_store/admin/admin_dashboard_screen.dart';
 
 class AuthGate extends StatelessWidget {
@@ -23,11 +24,13 @@ class AuthGate extends StatelessWidget {
           if (user?.email == 'admin1@gmail.com') {
             return const AdminDashboardScreen();
           }
-          return const RoleSelectionScreen();
+          // Perubahan: Login tidak lagi memaksa ke RoleSelectionScreen
+          // User tetap di UserHomeScreen, dan menu Toko akan muncul di sana
+          return const UserHomeScreen();
         }
 
-        // Jika tidak ada session, login
-        return const LoginScreen();
+        // Jika tidak ada session, langsung ke Halaman Pencarian (Public)
+        return const UserHomeScreen(); // Login hanya opsional untuk pemilik toko
       },
     );
   }
