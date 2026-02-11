@@ -58,6 +58,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Image.asset(
+                  'assets/images/Logo_KANG_JATI_Transparan.png',
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _fullNameController,
                 decoration: const InputDecoration(

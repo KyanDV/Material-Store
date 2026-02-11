@@ -96,7 +96,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Pilih Lokasi Pengiriman'),
+              title: const Text('Pilih Alamat Destinasi'),
               content: SizedBox(
                 width: double.maxFinite,
                 child: Column(
@@ -109,9 +109,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.search),
                           onPressed: () {
-                             // Panggil fungsi search di parent widget, tapi update state dialog jika perlu
                              _searchLocationOSM(addressController.text).then((_) {
-                               setStateDialog(() {}); // Refresh map di dialog
+                               setStateDialog(() {});
                              });
                           },
                         ),
@@ -122,6 +121,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                          });
                       },
                     ),
+
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 300,
@@ -133,7 +133,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         markers: _markers,
                         onMapCreated: (controller) => _mapController = controller,
                         onTap: (latLng) {
-                           // Allow tap to pin
                            setStateDialog(() {
                              _manualLocation = latLng;
                              _markers = {
@@ -403,7 +402,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Cari toko material...',
+                  hintText: 'Cari toko material (nama toko, alamat, kabupaten/kota)',
                   prefixIcon: const Icon(Icons.search, color: Colors.teal),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
