@@ -2,6 +2,7 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:material_store/auth/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -73,13 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           // Background Gradient
           Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColor.withOpacity(0.7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+            color: const Color(0xFF0A4A65), // Dark Blue Background
           ),
           Center(
             child: SingleChildScrollView(
@@ -96,27 +91,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Logo / Icon
-                        Icon(
-                          Icons.storefront_rounded,
-                          size: 64,
-                          color: Theme.of(context).primaryColor,
+                        // Logo Image
+                        Center(
+                          child: Image.asset(
+                            'assets/images/Logo_KANG_JATI_Transparan.png',
+                            height: 150,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        // Text below logo
                         Text(
-                          'KANG JATI',
+                          'Masuk ke KANG JATI',
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Tukang Jawa Tiga',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0A4A65),
+                          ),
                         ),
                         const SizedBox(height: 48),
                         
@@ -174,6 +164,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: _login,
                                 child: const Text('MASUK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               ),
+
+                        const SizedBox(height: 16),
+                        // Register Link
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text("Belum punya akun?"),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                                );
+                              },
+                              child: const Text('Daftar sekarang'),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

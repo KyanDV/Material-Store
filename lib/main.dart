@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:material_store/auth/auth_gate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:material_store/splash_screen.dart'; // Import SplashScreen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // TODO: Ganti dengan URL dan Anon Key dari Supabase Project Anda
-  await Supabase.initialize(
-    url: 'https://gilsfhprotxslmqpofeq.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpbHNmaHByb3R4c2xtcXBvZmVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNDc0NjcsImV4cCI6MjA4MzYyMzQ2N30.wObphgptgUcI3RzmC7VorcmOm0e-hWC36qYsx0yQTBg',
-  );
+  try {
+    await dotenv.load(fileName: ".env");
+
+    // TODO: Ganti dengan URL dan Anon Key dari Supabase Project Anda
+    await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL'] ?? '',
+      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    );
+  } catch (e) {
+    debugPrint("Error during initialization: $e");
+    // Lanjutkan loading app meski error (untuk debugging) atau tampilkan error widget
+  }
   
   runApp(const MyApp());
 }
@@ -77,7 +86,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const AuthGate(), // Gunakan AuthGate sebagai home
+      home: const SplashScreen(), // Set SplashScreen as initial route
     );
   }
 }

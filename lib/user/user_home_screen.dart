@@ -262,7 +262,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KANG JATI'),
+        title: const Text('KANG JATI', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
 
           InkWell(
@@ -366,7 +366,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                       ),
-                      child: const Text('Daftarkan Toko'),
+                      child: const Text(
+                        'Daftarkan Toko',
+                        style: TextStyle(
+                          color: Colors.white, // White Text
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -377,6 +383,16 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       ),
       body: Column(
         children: [
+          // Hero Logo Animation Destination
+          Hero(
+            tag: 'app_logo',
+            child: Image.asset(
+              'assets/images/Logo_KANG_JATI_Transparan.png',
+              height: 120, // Larger size for body
+              fit: BoxFit.contain,
+            ),
+          ),
+          
           // Search Bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
