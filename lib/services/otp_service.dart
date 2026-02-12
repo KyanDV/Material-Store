@@ -7,9 +7,8 @@ import 'package:http/http.dart' as http;
 /// Service untuk mengirim dan verifikasi OTP via NodeJS backend
 class OTPService {
   static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000';
-    }
+    // If we are on Android Emulator, mapping localhost to 10.0.2.2 is still useful
+    // But for Web/Physical device, we want to use the dotenv URL.
     String url = dotenv.env['OTP_SERVER_URL'] ?? 'http://10.0.2.2:3000';
     
     // Khusus Android Emulator, localhost harus diganti 10.0.2.2
