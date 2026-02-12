@@ -3,6 +3,7 @@ import 'package:material_store/auth/auth_gate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:material_store/splash_screen.dart'; // Import SplashScreen
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,36 +52,52 @@ class MyApp extends StatelessWidget {
           titleTextStyle: TextStyle(color: Color(0xFF0A4A65), fontSize: 20, fontWeight: FontWeight.bold),
           iconTheme: IconThemeData(color: Color(0xFF0A4A65)),
         ),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Color(0xFF0A4A65)),
-          bodyMedium: TextStyle(color: Color(0xFF0A4A65)),
-          titleLarge: TextStyle(color: Color(0xFF0A4A65), fontWeight: FontWeight.bold),
-          titleMedium: TextStyle(color: Color(0xFF0A4A65), fontWeight: FontWeight.bold),
+        textTheme: GoogleFonts.poppinsTextTheme(
+          Theme.of(context).textTheme.apply(
+            bodyColor: const Color(0xFF0A4A65),
+            displayColor: const Color(0xFF0A4A65),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           hintStyle: TextStyle(color: const Color(0xFF0A4A65).withOpacity(0.5)),
           labelStyle: const TextStyle(color: Color(0xFF0A4A65)),
           prefixIconColor: const Color(0xFF0A4A65),
           suffixIconColor: const Color(0xFF0A4A65),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(color: Color(0xFFD3C389), width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+             borderRadius: BorderRadius.circular(16),
+             borderSide: const BorderSide(color: Colors.red, width: 1),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFD3C389),
+            foregroundColor: const Color(0xFF0A4A65),
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
         cardTheme: CardTheme(
-          elevation: 2,
+          elevation: 4,
+          shadowColor: Colors.black12,
           color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           clipBehavior: Clip.antiAlias,
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         ),

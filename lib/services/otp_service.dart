@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,7 +10,13 @@ class OTPService {
     if (kIsWeb) {
       return 'http://localhost:3000';
     }
-    final url = dotenv.env['OTP_SERVER_URL'] ?? 'http://10.0.2.2:3000';
+    String url = dotenv.env['OTP_SERVER_URL'] ?? 'http://10.0.2.2:3000';
+    
+    // Khusus Android Emulator, localhost harus diganti 10.0.2.2
+    if (defaultTargetPlatform == TargetPlatform.android && url.contains('localhost')) {
+      url = url.replaceFirst('localhost', '10.0.2.2');
+    }
+    
     // Remove trailing slash if present
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
@@ -22,12 +29,17 @@ class OTPService {
         Uri.parse('$_baseUrl/send-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
-      );
+      ).timeout(const Duration(seconds: 60)); // Timeout 60 detik untuk antisipasi cold start
 
       final data = jsonDecode(response.body);
       return {
         'success': data['success'] ?? false,
         'message': data['message'] ?? 'Unknown error',
+      };
+    } on TimeoutException catch (_) {
+      return {
+        'success': false,
+        'message': 'Koneksi Timeout. Server mungkin sedang "tidur" (Cold Start). Silakan coba lagi sebentar lagi.',
       };
     } catch (e) {
       debugPrint('Error sending OTP: $e');
@@ -60,12 +72,19 @@ class OTPService {
           'otp': otp,
           'role': role,
         }),
-      );
+        'role': role,
+        }),
+      ).timeout(const Duration(seconds: 60));
 
       final data = jsonDecode(response.body);
       return {
         'success': data['success'] ?? false,
         'message': data['message'] ?? 'Unknown error',
+      };
+    } on TimeoutException catch (_) {
+      return {
+        'success': false,
+        'message': 'Koneksi Timeout saat registrasi. Silakan coba lagi.',
       };
     } catch (e) {
       debugPrint('Error registering: $e');

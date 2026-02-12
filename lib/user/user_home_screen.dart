@@ -105,7 +105,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     TextField(
                       controller: addressController,
                       decoration: InputDecoration(
-                        labelText: 'Cari Alamat (Jalan, Kota)',
+                        labelText: 'Cari Alamat (Jalan, , )',
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.search),
                           onPressed: () {
@@ -260,187 +260,130 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('KANG JATI', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent, // Transparent to show body background
+        elevation: 0,
         actions: [
-
-          InkWell(
-            onTap: _showManualLocationDialog,
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, color: Colors.red),
-                const SizedBox(width: 4),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: Text(
-                    _addressName,
-                    style: const TextStyle(color: Colors.black87),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const Icon(Icons.keyboard_arrow_down, color: Colors.black87),
-              ],
-            ),
-          ),
-          const Spacer(), // Spacer agar tombol login/toko ke kanan (atau gunakan MainAxisAlignment di Row parent jika perlu)
-          
           StreamBuilder<AuthState>(
             stream: Supabase.instance.client.auth.onAuthStateChange,
             builder: (context, snapshot) {
               final session = Supabase.instance.client.auth.currentSession;
-              
-              // Jika sudah login, tampilkan ikon Toko
               if (session != null) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const OwnerHomeScreen()),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [
-                              Icon(Icons.store, color: Theme.of(context).primaryColor),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Toko', 
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor, 
-                                  fontWeight: FontWeight.bold
-                                )
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () async {
-                          await Supabase.instance.client.auth.signOut();
-                        },
-                        icon: const Icon(Icons.logout, color: Colors.black),
-                        tooltip: 'Keluar',
-                      ),
-                    ],
-                  ),
+                return IconButton(
+                   icon: const Icon(Icons.store, color: Color(0xFFD3C389)), // Gold Icon
+                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OwnerHomeScreen())),
+                   tooltip: 'Halaman Toko',
                 );
               }
-
-              // Jika belum login, tampilkan tombol Masuk & Daftar
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).primaryColor,
-                        side: BorderSide(color: Theme.of(context).primaryColor),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: const Text('Masuk'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: const Text(
-                        'Daftarkan Toko',
-                        style: TextStyle(
-                          color: Colors.white, // White Text
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+              return TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+                child: const Text(
+                  'Masuk',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          // Hero Logo Animation Destination
-          Hero(
-            tag: 'app_logo',
-            child: Image.asset(
-              'assets/images/Logo_KANG_JATI_Transparan.png',
-              height: 120, // Larger size for body
-              fit: BoxFit.contain,
+          // Header Section (Search & Location)
+          Container(
+            padding: EdgeInsets.only(
+              bottom: 24, 
+              left: 16, 
+              right: 16, 
+              top: MediaQuery.of(context).padding.top + 10 // Adjust for status bar
             ),
-          ),
-          
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Card(
-              elevation: 4,
-              shadowColor: Colors.black26,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Cari toko material (nama toko, alamat, kabupaten/kota)',
-                  prefixIcon: const Icon(Icons.search, color: Colors.teal),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                ),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0A4A65), // Deep Blue
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
               ),
             ),
+            child: Column(
+              children: [
+                // Logo
+                Image.asset(
+                  'assets/images/Logo_KANG_JATI_Transparan.png',
+                  height: 80,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 8),
+
+                // Location Picker
+                InkWell(
+                  onTap: _showManualLocationDialog,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on, color: Color(0xFFD3C389), size: 16), // Gold Location Icon
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            _addressName,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Search Bar
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Cari toko... (nama, alamat, kabupaten/kota)',
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFF0A4A65)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: const BorderSide(color: Color(0xFFD3C389), width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           
-          // Location Status (With Debug Info)
+          // Location Status & Error
           if (_isLoadingLocation)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+             Padding(padding: const EdgeInsets.all(8.0), child: LinearProgressIndicator(backgroundColor: Colors.transparent, color: Theme.of(context).primaryColor)),
+
+          if (_currentLocation == null && !_isLoadingLocation)
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(12)),
               child: Row(
                 children: [
-                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                  const SizedBox(width: 8),
-                  Text(_loadingMessage, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                   const Icon(Icons.location_off, size: 20, color: Colors.red),
+                   const SizedBox(width: 12),
+                   Expanded(child: Text('Gagal mendapatkan lokasi: $_loadingMessage', style: const TextStyle(color: Colors.red, fontSize: 12))),
+                   IconButton(icon: const Icon(Icons.refresh, color: Colors.red), onPressed: _determinePosition),
                 ],
-              ),
-            )
-          else if (_currentLocation == null)
-             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(8)),
-                child: Row(
-                  children: [
-                     const Icon(Icons.location_off, size: 16, color: Colors.red),
-                     const SizedBox(width: 8),
-                     Expanded(child: Text('Lokasi tidak ditemukan: $_loadingMessage', style: const TextStyle(fontSize: 12, color: Colors.red))),
-                     IconButton(icon: const Icon(Icons.refresh, size: 16), onPressed: _determinePosition)
-                  ],
-                ),
               ),
             ),
 
@@ -460,9 +403,9 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                         Icon(Icons.domain_disabled, size: 64, color: Colors.grey),
+                         Icon(Icons.store_mall_directory_outlined, size: 80, color: Colors.grey),
                          SizedBox(height: 16),
-                         Text('Belum ada toko yang terdaftar.'),
+                         Text('Belum ada toko di sekitar area ini.', style: TextStyle(color: Colors.grey, fontSize: 16)),
                       ],
                     ),
                   );
@@ -476,7 +419,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 }).toList();
 
                 if (docs.isEmpty) {
-                   return const Center(child: Text('Tidak ada toko yang cocok dengan pencarian.'));
+                   return const Center(child: Text('Tidak ada hasil pencarian.'));
                 }
 
                 final myLoc = _currentLocation;
@@ -487,8 +430,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                      var latB = (b['latitude'] as num?)?.toDouble();
                      var lngB = (b['longitude'] as num?)?.toDouble();
                      
-                     if (latA == null || lngA == null) return 1; // A to bottom
-                     if (latB == null || lngB == null) return -1; // B to bottom
+                     if (latA == null || lngA == null) return 1; 
+                     if (latB == null || lngB == null) return -1;
                      
                      double distA = _calculateDistance(myLoc.latitude, myLoc.longitude, latA, lngA);
                      double distB = _calculateDistance(myLoc.latitude, myLoc.longitude, latB, lngB);
@@ -498,7 +441,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     var data = docs[index];
@@ -519,14 +462,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                         lng
                       );
                       if (distInMeters > 1000) {
-                        distanceText = '${(distInMeters / 1000).toStringAsFixed(1)} km';
+                        distanceText = '${(distInMeters / 1000).toStringAsFixed(1)} KM';
                       } else {
-                        distanceText = '${distInMeters.toStringAsFixed(0)} m';
+                        distanceText = '${distInMeters.toStringAsFixed(0)} M';
                       }
-                    } else if (_currentLocation == null) {
-                       distanceText = 'Lokasi Anda?';
-                    } else {
-                       distanceText = 'Lokasi Toko?';
                     }
 
                     return StoreCard(
@@ -550,7 +489,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               },
             ),
           ),
-
         ],
       ),
     );
@@ -586,35 +524,26 @@ class _StoreCardState extends State<StoreCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Colors from User Requirement
-    final Color hoverColor = const Color(0xFFD3C389); // Gold
-    final Color defaultColor = const Color(0xFF0A4A65); // Dark Blue
-    final Color primaryColor = Theme.of(context).primaryColor;
-    
-    // Dynamic Text Color based on Hover State
-    final Color textColor = _isHovered ? const Color(0xFF0A4A65) : Colors.white;
-    final Color iconColor = _isHovered ? const Color(0xFF0A4A65) : Colors.white70;
-
     return Card(
-      color: _isHovered ? hoverColor : defaultColor,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      elevation: _isHovered ? 6 : 3,
+      color: _isHovered ? const Color(0xFFD3C389) : Colors.white, // Gold logic
+      elevation: _isHovered ? 6 : 4,
       shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
         onTap: widget.onTap,
         onHover: (value) {
-          setState(() {
-            _isHovered = value;
-          });
+           setState(() {
+             _isHovered = value;
+           });
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Store Image (Full Width)
+            // Image Area
             SizedBox(
-              height: 150,
+              height: 140,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -623,30 +552,33 @@ class _StoreCardState extends State<StoreCard> {
                           imageUrl: widget.imageUrl!,
                           fit: BoxFit.cover,
                           placeholder: (_, __) => Container(color: Colors.grey[200]),
-                          errorWidget: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.store, color: Colors.grey)),
+                          errorWidget: (_, __, ___) => Container(color: Colors.grey[100], child: const Icon(Icons.store, color: Colors.grey, size: 40)),
                         )
-                      : Container(color: primaryColor.withOpacity(0.1), child: Icon(Icons.store, size: 50, color: primaryColor.withOpacity(0.5))),
+                      : Container(
+                          color: const Color(0xFF0A4A65).withOpacity(0.1),
+                          child: const Icon(Icons.store, size: 40, color: Color(0xFF0A4A65)),
+                        ),
                   
                   // Distance Badge
                   if (widget.distanceText.isNotEmpty)
                     Positioned(
-                      bottom: 12,
+                      top: 12,
                       right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.near_me, size: 14, color: primaryColor),
+                            const Icon(Icons.place, size: 14, color: Color(0xFFFA8112)), // Orange Icon
                             const SizedBox(width: 4),
                             Text(
                               widget.distanceText,
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0A4A65)),
                             ),
                           ],
                         ),
@@ -656,68 +588,70 @@ class _StoreCardState extends State<StoreCard> {
               ),
             ),
             
-            // Store Details
+            // Info Area
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.storeName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: textColor
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                       Expanded(
+                         child: Text(
+                          widget.storeName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0A4A65), // Deep Blue Title
+                          ),
+                         ),
+                       ),
+                       if (widget.isDelivery)
+                         Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                           decoration: BoxDecoration(
+                             color: const Color(0xFFE0F2F1), // Light Teal
+                             borderRadius: BorderRadius.circular(8),
+                           ),
+                           child: const Text('Siap Antar', style: TextStyle(fontSize: 10, color: Color(0xFF00695C), fontWeight: FontWeight.bold)),
+                         ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 14, color: iconColor),
+                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           widget.address,
-                          style: TextStyle(color: textColor, fontSize: 13),
+                          style: const TextStyle(fontSize: 13, color: Colors.black87),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (widget.openingHours != null && widget.openingHours!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _isHovered ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.access_time, size: 12, color: iconColor),
-                              const SizedBox(width: 4),
-                              Text(widget.openingHours!, style: TextStyle(fontSize: 11, color: textColor)),
-                            ],
+                  if (widget.openingHours != null && widget.openingHours!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 14, color: _isHovered ? const Color(0xFF0A4A65) : Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.openingHours!,
+                          style: TextStyle(
+                            fontSize: 12, 
+                            color: _isHovered ? const Color(0xFF0A4A65) : Colors.grey,
+                            fontWeight: _isHovered ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
-                      const Spacer(),
-                      // Distance text removed as per request
-                      if (widget.isDelivery)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFA8112), 
-                            borderRadius: BorderRadius.circular(12),
-                            // border: Border.all(color: primaryColor.withOpacity(0.2)), // Removing border for clean look
-                          ),
-                          child: const Text('Siap Antar', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                        )
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
