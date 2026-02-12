@@ -25,6 +25,7 @@ class OTPService {
   /// Returns: Map dengan 'success' (bool) dan 'message' (String)
   static Future<Map<String, dynamic>> sendOTP(String email) async {
     try {
+      debugPrint('Sending OTP to: $_baseUrl/send-otp'); // DEBUG LOG
       final response = await http.post(
         Uri.parse('$_baseUrl/send-otp'),
         headers: {'Content-Type': 'application/json'},
@@ -71,8 +72,6 @@ class OTPService {
           'password': password,
           'otp': otp,
           'role': role,
-        }),
-        'role': role,
         }),
       ).timeout(const Duration(seconds: 60));
 
