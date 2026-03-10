@@ -24,7 +24,6 @@ class AuthGate extends StatelessWidget {
           if (user?.email == 'admin1@gmail.com') {
             return const AdminDashboardScreen();
           }
-          // Perubahan: Login tidak lagi memaksa ke RoleSelectionScreen
           // User tetap di UserHomeScreen, dan menu Toko akan muncul di sana
           return const UserHomeScreen();
         }
