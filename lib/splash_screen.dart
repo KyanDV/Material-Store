@@ -36,8 +36,8 @@ class _SplashScreenState extends State<SplashScreen> {
           tag: 'app_logo',
           child: Image.asset(
             'assets/images/Logo_WARUNG_JATI_Transparan.png',
-            width: 200, // Initial size
-            height: 200,
+            width: 400, // Initial size
+            height: 400,
           ),
         ),
       ),

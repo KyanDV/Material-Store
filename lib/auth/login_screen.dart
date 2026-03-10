@@ -94,14 +94,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Logo Image
                         Center(
                           child: Image.asset(
-                            'assets/images/Logo_KANG_JATI_Transparan.png',
+                            'assets/images/Logo_WARUNG_JATI_Transparan.png',
                             height: 150,
                             fit: BoxFit.contain,
                           ),
                         ),
                         // Text below logo
                         Text(
-                          'Masuk ke KANG JATI',
+                          'Masuk ke WARUNG JATI',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,

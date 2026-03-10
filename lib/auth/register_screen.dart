@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       children: [
                         Center(
                           child: Image.asset(
-                            'assets/images/Logo_KANG_JATI_Transparan.png',
+                            'assets/images/Logo_WARUNG_JATI_Transparan.png',
                             height: 100,
                             fit: BoxFit.contain,
                           ),

@@ -310,7 +310,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               children: [
                 // Logo
                 Image.asset(
-                  'assets/images/Logo_KANG_JATI_Transparan.png',
+                  'assets/images/Logo_WARUNG_JATI_Transparan.png',
                   height: 80,
                   fit: BoxFit.contain,
                 ),
